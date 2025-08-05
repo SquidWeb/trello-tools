@@ -2,12 +2,11 @@
 // Usage: node send_to_mattermost.js <markdown_file> <mattermost_channel_id>
 require("dotenv").config();
 const fs = require("fs");
-const axios = require("axios");
 const dayjs = require("dayjs");
+const { postToChannel } = require("./mattermost");
 
 const MATTERMOST_URL = process.env.MATTERMOST_URL;
 const MATTERMOST_TOKEN = process.env.MATTERMOST_TOKEN;
-const MAX_MESSAGE_CHARS = 16383;
 
 if (!MATTERMOST_URL || !MATTERMOST_TOKEN) {
   console.error(
@@ -15,7 +14,7 @@ if (!MATTERMOST_URL || !MATTERMOST_TOKEN) {
   );
   process.exit(1);
 }
-const filename = `trello-summary-${dayjs().format("YYYY-MM-DD-HH")}.md`;
+const filename = `daily-report-${dayjs().format("YYYY-MM-DD-HH")}.md`;
 const channelId = "18wejrtaufghupg6hq9fg7cf3w";
 
 function parseMarkdownSections(md) {
@@ -54,8 +53,8 @@ function parseMarkdownSections(md) {
   }
 
   console.log("🎫 TICKETS:");
-  tickets.forEach((ticket, index) => {
-    console.log(`${index + 1}. ${ticket}`);
+  tickets.forEach((ticket) => {
+    console.log("sending ticket: ", ticket);
   });
 
   console.log("\n=== END DRY RUN ===\n");
@@ -80,12 +79,12 @@ function parseMarkdownSections(md) {
 
         try {
           if (summary) {
-            await postToMattermost(channelId, summary);
+            await postToChannel(channelId, summary);
             console.log("✅ Summary sent");
           }
 
           for (const ticket of tickets) {
-            await postToMattermost(channelId, ticket);
+            await postToChannel(channelId, ticket);
             console.log(`✅ Ticket sent: ${ticket}`);
             // Optional: add delay to avoid rate limits
             await new Promise((res) => setTimeout(res, 500));
