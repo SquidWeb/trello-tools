@@ -1,9 +1,9 @@
 require("dotenv").config();
-const axios = require("axios");
 const dayjs = require("dayjs");
 const fs = require("fs");
+const { getMe, getBoardLists, getBoardCards } = require('./lib/trello');
 
-const { TRELLO_API_KEY, TRELLO_TOKEN, TRELLO_BOARD_ID } = process.env;
+const { TRELLO_BOARD_ID } = process.env;
 
 // ==== PASTE YOUR PLANYWAY JSON HERE EACH TIME ====
 const planywayTickets = [
@@ -59,9 +59,7 @@ async function generateQuickReport() {
   try {
     // === 1. Fetch Trello user ===
     console.log("Fetching user information...");
-    const userUrl = `https://api.trello.com/1/members/me?key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}`;
-    const userResponse = await axios.get(userUrl);
-    const currentUser = userResponse.data;
+    const currentUser = await getMe();
     console.log(` User: ${currentUser.fullName || currentUser.username}`);
 
     // === 2. Load or fetch Trello board data ===
@@ -77,30 +75,18 @@ async function generateQuickReport() {
     } else {
       // Fetch lists
       console.log("Fetching board lists...");
-      const listsUrl = `https://api.trello.com/1/boards/${TRELLO_BOARD_ID}/lists`;
-      const listsResponse = await axios.get(listsUrl, {
-        params: {
-          key: TRELLO_API_KEY,
-          token: TRELLO_TOKEN,
-          fields: "id,name,closed",
-        },
-      });
-      lists = listsResponse.data.filter((list) => !list.closed);
+      lists = (await getBoardLists(TRELLO_BOARD_ID, { includeClosed: false })) || [];
       // Map of list IDs to names
       const listMap = new Map(lists.map((list) => [list.id, list.name]));
       // Fetch cards
       console.log("Fetching cards...");
-      const cardsUrl = `https://api.trello.com/1/boards/${TRELLO_BOARD_ID}/cards`;
-      const cardsResponse = await axios.get(cardsUrl, {
-        params: {
-          key: TRELLO_API_KEY,
-          token: TRELLO_TOKEN,
-          fields: "id,name,shortUrl,dateLastActivity,idMembers,idList",
-          members: true,
-        },
-      });
+      const cardsResponse = await getBoardCards(
+        TRELLO_BOARD_ID,
+        ['id','name','shortUrl','dateLastActivity','idMembers','idList'],
+        { members: true }
+      );
       // Add list name and status to each card
-      cards = cardsResponse.data.map((card) => {
+      cards = cardsResponse.map((card) => {
         const listName = listMap.get(card.idList) || "Unknown";
         const lowerListName = listName.toLowerCase();
         return {

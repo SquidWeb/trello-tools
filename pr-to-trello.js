@@ -1,5 +1,6 @@
 require("dotenv").config();
 const axios = require("axios");
+const { ensureConfig, client: trelloClient } = require('./lib/trello');
 const readline = require("readline");
 
 const {
@@ -216,19 +217,10 @@ async function fetchGitHubPR(prId, owner, repo) {
  * @returns {object} - The created comment
  */
 async function addTrelloComment(cardId, comment) {
-  const url = `https://api.trello.com/1/cards/${cardId}/actions/comments`;
-  
+  ensureConfig();
   try {
-    const response = await axios.post(url, {
-      text: comment
-    }, {
-      params: {
-        key: TRELLO_API_KEY,
-        token: TRELLO_TOKEN
-      }
-    });
-    
-    return response.data;
+    const res = await trelloClient.post(`/cards/${cardId}/actions/comments`, null, { params: { text: comment } });
+    return res.data;
   } catch (error) {
     if (error.response?.status === 404) {
       throw new Error(`Trello card not found: ${cardId}`);
@@ -236,7 +228,6 @@ async function addTrelloComment(cardId, comment) {
     throw new Error(`Failed to add comment to Trello: ${error.message}`);
   }
 }
-
 /**
  * Format the comment for Trello
  * @param {object} prData - The GitHub PR data

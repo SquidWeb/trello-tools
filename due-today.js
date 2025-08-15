@@ -7,10 +7,17 @@
   - Updates due date to today (local noon) to avoid timezone pitfalls
 */
 
-const axios = require('axios');
 const dayjs = require('dayjs');
 const readline = require('readline');
 require('dotenv').config();
+const {
+  ensureConfig,
+  getMe,
+  getBoardLists,
+  getListByName,
+  getListCards,
+  updateCardDue,
+} = require('./lib/trello');
 
 const { TRELLO_API_KEY, TRELLO_TOKEN, TRELLO_BOARD_ID, TRELLO_DOING_LIST_ID, DOING_LIST_NAME } = process.env;
 
@@ -24,27 +31,12 @@ function promptYesNo(question) {
   });
 }
 
-async function getMe() {
-  const url = `https://api.trello.com/1/members/me`;
-  const { data } = await axios.get(url, { params: { key: TRELLO_API_KEY, token: TRELLO_TOKEN } });
-  return data;
-}
-
 async function getDoingListId() {
   if (TRELLO_DOING_LIST_ID) return TRELLO_DOING_LIST_ID;
   if (!TRELLO_BOARD_ID) throw new Error('Missing TRELLO_BOARD_ID or TRELLO_DOING_LIST_ID in .env');
-  const listsUrl = `https://api.trello.com/1/boards/${TRELLO_BOARD_ID}/lists`;
-  const { data: lists } = await axios.get(listsUrl, { params: { key: TRELLO_API_KEY, token: TRELLO_TOKEN, cards: 'none' } });
-  const name = (DOING_LIST_NAME || 'Doing').toLowerCase();
-  const list = lists.find((l) => (l.name || '').toLowerCase() === name);
+  const list = await getListByName(TRELLO_BOARD_ID, DOING_LIST_NAME || 'Doing');
   if (!list) throw new Error(`Cannot find list named "${DOING_LIST_NAME || 'Doing'}" on board ${TRELLO_BOARD_ID}`);
   return list.id;
-}
-
-async function getCardsInList(listId) {
-  const url = `https://api.trello.com/1/lists/${listId}/cards`;
-  const { data } = await axios.get(url, { params: { key: TRELLO_API_KEY, token: TRELLO_TOKEN, fields: 'name,due,idMembers,url' } });
-  return data;
 }
 
 function isPastDueButNotToday(dueIso, now) {
@@ -56,17 +48,13 @@ function isPastDueButNotToday(dueIso, now) {
   return due.isBefore(now, 'day') && dueDate !== today;
 }
 
-async function updateCardDue(cardId, newDueIso) {
-  const url = `https://api.trello.com/1/cards/${cardId}`;
-  const { data } = await axios.put(url, null, { params: { key: TRELLO_API_KEY, token: TRELLO_TOKEN, due: newDueIso } });
-  return data;
-}
-
 async function main() {
   if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
     console.error('Missing Trello configuration. Please set TRELLO_API_KEY and TRELLO_TOKEN in your .env');
     process.exit(1);
   }
+  // Ensure helper is configured too
+  try { ensureConfig(); } catch (e) { console.error(e.message); process.exit(1); }
 
   const now = dayjs();
   const dryRun = process.argv.includes('--dry-run');
@@ -81,7 +69,7 @@ async function main() {
     const listId = await getDoingListId();
 
     console.log('📄 Fetching cards in Doing...');
-    const cards = await getCardsInList(listId);
+    const cards = await getListCards(listId, ['name','due','idMembers','url']);
 
     const candidates = cards.filter((c) => Array.isArray(c.idMembers) && c.idMembers.includes(myId) && isPastDueButNotToday(c.due, now));
 
