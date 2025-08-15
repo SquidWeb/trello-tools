@@ -3,7 +3,7 @@
 require("dotenv").config();
 const fs = require("fs");
 const dayjs = require("dayjs");
-const { postToChannel } = require("./mattermost");
+const { postToChannel, uploadFile } = require("./mattermost");
 
 const MATTERMOST_URL = process.env.MATTERMOST_URL;
 const MATTERMOST_TOKEN = process.env.MATTERMOST_TOKEN;
@@ -21,14 +21,30 @@ function parseMarkdownSections(md) {
   const lines = md.split(/\r?\n/);
   let summaryLines = [];
   let ticketLines = [];
+  let screenshotPath = null;
   let inTicketSection = false;
+  let inScreenshotSection = false;
+  
   for (const line of lines) {
     if (line.trim().startsWith("## tickets:")) {
       inTicketSection = true;
+      inScreenshotSection = false;
+      continue;
+    }
+    if (line.trim().startsWith("## screenshot:")) {
+      inScreenshotSection = true;
+      inTicketSection = false;
       continue;
     }
     if (line.startsWith("---")) break;
-    if (inTicketSection) {
+    
+    if (inScreenshotSection) {
+      // Extract screenshot path from markdown image syntax
+      const imageMatch = line.match(/!\[.*?\]\((.+?)\)/);
+      if (imageMatch) {
+        screenshotPath = imageMatch[1];
+      }
+    } else if (inTicketSection) {
       if (line.trim()) ticketLines.push(line);
     } else {
       summaryLines.push(line);
@@ -37,12 +53,13 @@ function parseMarkdownSections(md) {
   return {
     summary: summaryLines.join("\n").trim(),
     tickets: ticketLines.map((l) => l.trim()).filter(Boolean),
+    screenshotPath: screenshotPath,
   };
 }
 
 (async () => {
   const md = fs.readFileSync(filename, "utf8");
-  const { summary, tickets } = parseMarkdownSections(md);
+  const { summary, tickets, screenshotPath } = parseMarkdownSections(md);
 
   console.log("=== DRY RUN: Messages to be sent to Mattermost ===\n");
 
@@ -57,9 +74,19 @@ function parseMarkdownSections(md) {
     console.log("sending ticket: ", ticket);
   });
 
+  if (screenshotPath) {
+    console.log("\n📸 SCREENSHOT:");
+    console.log(`Screenshot file: ${screenshotPath}`);
+    if (fs.existsSync(screenshotPath)) {
+      console.log("✅ Screenshot file found");
+    } else {
+      console.log("❌ Screenshot file not found");
+    }
+  }
+
   console.log("\n=== END DRY RUN ===\n");
 
-  if (tickets.length === 0 && !summary) {
+  if (tickets.length === 0 && !summary && !screenshotPath) {
     console.log("❌ No content to send. Exiting.");
     return;
   }
@@ -78,9 +105,21 @@ function parseMarkdownSections(md) {
         console.log("\n🚀 Sending messages to Mattermost...");
 
         try {
+          let screenshotFileId = null;
+          
+          // Upload screenshot first if it exists
+          if (screenshotPath && fs.existsSync(screenshotPath)) {
+            console.log("📸 Uploading screenshot...");
+            const fileInfo = await uploadFile(channelId, screenshotPath);
+            screenshotFileId = fileInfo.id;
+            console.log("✅ Screenshot uploaded");
+          }
+
           if (summary) {
-            await postToChannel(channelId, summary);
-            console.log("✅ Summary sent");
+            const fileIds = screenshotFileId ? [screenshotFileId] : [];
+            await postToChannel(channelId, summary, fileIds);
+            console.log("✅ Summary sent" + (screenshotFileId ? " with screenshot" : ""));
+            screenshotFileId = null; // Only attach to first message
           }
 
           for (const ticket of tickets) {
