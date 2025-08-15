@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "pr-to-trello": "node pr-to-trello.js"
+    "pr-to-trello": "node pr-to-trello.js",
+    "due-today": "node due-today.js"
   },
   "keywords": [],
   "author": "",
