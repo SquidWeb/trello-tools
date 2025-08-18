@@ -19,15 +19,27 @@ function replaceLocalhostUrls(text, baseUrl) {
   if (!text || !baseUrl) return text;
   // Ensure no trailing slash on base
   const base = baseUrl.replace(/\/$/, "");
+  // Special-case: map localhost:3002 to a fixed staging URL regardless of baseUrl
+  const fixedBase3002 = 'https://artlogic.m.staging.squidweb.org'.replace(/\/$/, "");
+  // 3002 with scheme
+  text = text.replace(
+    /(https?:\/\/)(localhost|127\.0\.0\.1):3002((?:\/[^(\s)\"]*)?[^\s\)]*)?/gi,
+    (_, _scheme, _host, path) => fixedBase3002 + (path || "")
+  );
+  // 3002 without scheme
+  text = text.replace(
+    /\b(localhost|127\.0\.0\.1):3002((?:\/[^(\s)\"]*)?[^\s\)]*)?/gi,
+    (_, _host, path) => fixedBase3002 + (path || "")
+  );
   // Patterns to replace: with or without scheme, ports 3000 or 8080
   // 1) http(s)://localhost:PORT[/path][?q][#h]
   text = text.replace(
-    /(https?:\/\/)(localhost|127\.0\.0\.1):(3000|8080)((?:\/[^(\s\)\"]*)?[^\s\)]*)?/gi,
+    /(https?:\/\/)(localhost|127\.0\.0\.1):(3000|8080)((?:\/[^(\s)\"]*)?[^\s\)]*)?/gi,
     (_, _scheme, _host, _port, path) => base + (path || "")
   );
   // 2) localhost:PORT[/path][?q][#h] without scheme
   text = text.replace(
-    /\b(localhost|127\.0\.0\.1):(3000|8080)((?:\/[^(\s\)\"]*)?[^\s\)]*)?/gi,
+    /\b(localhost|127\.0\.0\.1):(3000|8080)((?:\/[^(\s)\"]*)?[^\s\)]*)?/gi,
     (_, _host, _port, path) => base + (path || "")
   );
   return text;
