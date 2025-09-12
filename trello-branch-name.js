@@ -15,6 +15,7 @@
 */
 
 const { ensureConfig, client } = require('./lib/trello');
+const { spawn } = require('child_process');
 
 function slugifyName(name) {
   return String(name || '')
@@ -72,6 +73,31 @@ async function main() {
   try {
     const id = await extractTicketId(arg);
     console.log(id);
+    
+    // Copy to clipboard without blocking: spawn a detached shell and unref it.
+    // We pass the content via an env var to avoid shell escaping issues.
+    const fireAndForget = (cmd) => {
+      const child = spawn('sh', ['-c', cmd], {
+        env: { ...process.env, CLIP_CONTENT: id },
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+    };
+
+    // Try wl-copy first (Wayland), then fallback to xclip (X11)
+    // Using env var: printf %s "$CLIP_CONTENT" | wl-copy
+    try {
+      fireAndForget('printf %s "$CLIP_CONTENT" | wl-copy');
+      console.log(`Branch name copied to clipboard: ${id}`);
+    } catch (wlErr) {
+      try {
+        fireAndForget('printf %s "$CLIP_CONTENT" | xclip -selection clipboard');
+        console.log(`Branch name copied to clipboard: ${id}`);
+      } catch (xclipErr) {
+        console.error('Note: Could not copy to clipboard. Install wl-clipboard (Wayland) or xclip (X11) for automatic copying.');
+      }
+    }
   } catch (err) {
     console.error(err.message);
     process.exit(1);
