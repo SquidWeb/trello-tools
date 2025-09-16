@@ -3,7 +3,7 @@
 require("dotenv").config();
 const fs = require("fs");
 const dayjs = require("dayjs");
-const { postToChannel, uploadFile } = require("./mattermost");
+const { postToChannel, uploadFile } = require("./lib/mattermost");
 
 const MATTERMOST_URL = process.env.MATTERMOST_URL;
 const MATTERMOST_TOKEN = process.env.MATTERMOST_TOKEN;
