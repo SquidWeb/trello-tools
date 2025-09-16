@@ -6,3 +6,4 @@ mattermost-report-*.md
 trello-summary-*.json
 *.png
 reports
+today.*
