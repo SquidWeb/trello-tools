@@ -2,7 +2,7 @@
   "name": "report",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "catalog.js",
   "scripts": {
     "pr-to-trello": "node pr-to-trello.js",
     "due-today": "node due-today.js",

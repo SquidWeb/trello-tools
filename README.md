@@ -1,12 +1,29 @@
-# Trello 30-Hour Activity Report & Mattermost Integration
+# Commands
 
-This project generates a comprehensive report of Trello cards you've interacted with in the last 30 hours, and lets you send your report to Mattermost.
+Short list of available tools (run via `npm run <name>` where applicable):
+
+- `daily-report` — Generate a report of Trello cards you've interacted with today, and let you send it to Mattermost.
+- `daily-report-to-mattermost` — Send the generated report to a Mattermost channel via webhook.
+- `pr-to-trello` — Convert a GitHub PR into a Trello comment; optionally move to review and complete.
+- `due-today` — Move overdue "Doing" cards assigned to you to today (spaced times).
+- `create-card` — Create a new Trello card with title, description (text or @file), assign you, due today.
+- `trello-branch` — Generate a branch-friendly slug from a Trello card URL (e.g., `9614-some-title`).
+- `review-week` — Review recent-due cards and mark complete (optionally move to Done).
+- `trello-export` — Export a Trello card to a local folder with markdown and screenshots.
+- `planyway-inspect` — Inspect Planyway pluginData/custom fields for a card or board.
+- `planyway-watch` — Watch a card and print diffs in pluginData/custom fields over time.
+- `catalog` — List all available CLI tools in this repository.
+- `trello-enhance` — Enhance card descriptions (and titles) with an LLM via OpenRouter.
+
+# Trello Activity Report & Mattermost Integration
+
+This project generates a comprehensive report of Trello cards you've interacted with today, and lets you send your report to Mattermost.
 
 ---
 
 ## Features
 
-- Filter and track Trello cards based on your manual Planyway export (paste JSON at the top of `daily-report.js`).
+- Filter and track Trello cards based on your manual Planyway export (added to `today.json`).
 - Summed tracked time for each unique ticket (Planyway-style, even with duplicates).
 - Output Markdown report, sorted and matched as in Planyway.
 - Optional: Send the generated report to a Mattermost channel via webhook (`daily-report-to-mattermost.js`).
@@ -49,8 +66,9 @@ npm install
 ### 1. Generate a Report with Planyway Data
 
 1. Export or copy your Planyway tickets as JSON (see example format below).
-2. Paste your JSON array into the `planywayTickets` variable at the top of `daily-report.js`.
-3. Run the script:
+2. Paste your JSON array into the `today.json` file.
+3. Add the screenshot from Planyway to `today.png`.
+4. Run the script:
 
 ```bash
 node daily-report.js
@@ -59,10 +77,16 @@ node daily-report.js
 - The script will fetch Trello cards, match and sum tracked time for each unique ticket (by name), and output a Markdown report in the same order as your Planyway data.
 - The report file will be saved as `trello-summary-YYYY-MM-DD-HH.md`.
 
+Tip: Populate `today.json` quickly from Planyway
+
+- Open Planyway, Time Tracking, switch to list view, then open your browser DevTools Console, paste the contents of `planyway-list.js`, and press Enter.
+- It prints a small table and copies today's rows to your clipboard (if `copy` is available).
+- Paste into `today.json`, save, then run the daily report.
+
 #### Example Planyway JSON
 
 ```js
-const planywayTickets = [
+[
   {
     date: "Aug 05",
     name: "mobile endpoints | broken access control",
@@ -79,7 +103,7 @@ const planywayTickets = [
     time: "5‎h 43m",
   },
   // ... more tickets
-];
+]
 ```
 
 ### 2. Send the Report to Mattermost
