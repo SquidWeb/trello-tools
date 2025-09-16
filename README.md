@@ -107,7 +107,48 @@ node daily-report-to-mattermost.js
 
 - Markdown report: `trello-summary-YYYY-MM-DD-HH.md`
 - Console progress and summary
-- Optionally: posted to Mattermost if you run `daily-report-to-mattermost.js`
+  - Optionally: posted to Mattermost if you run `daily-report-to-mattermost.js`
+
+## PR to Trello (short)
+
+Turn a GitHub PR into a Trello comment with test steps and screenshots, then optionally move the card to review.
+
+### Setup (extra)
+
+Add these to `.env` in addition to Trello creds above:
+
+```
+GITHUB_TOKEN=ghp_xxx
+# Optional for auto-moving to review
+REVIEW_LIST_ID=xxxx            # or
+TRELLO_BOARD_ID=xxxx
+REVIEW_LIST_NAME=Ready for review & testing (developers)
+
+# Optional: replace localhost links in PR description with staging
+UR_STAGING_BASE_URL=https://your-staging.example.com
+```
+
+### Run
+
+```
+npm run pr-to-trello -- <PR_URL>
+# or
+npm run pr-to-trello -- <PR_ID> <owner/repo>
+```
+
+Useful flags:
+
+- --yes skip preview confirmation
+- --no-test omit the "How to test" block
+- --inline embed images instead of posting links
+
+### What it does
+
+- Finds the Trello card URL in the PR description.
+- Parses "How to test" (and similar) and screenshots; ignores "Notes for me".
+- Replaces localhost URLs with staging if `UR_STAGING_BASE_URL` is set (special-case port 3002 to staging).
+- Posts a single formatted comment to the card.
+- Then asks: move card to "Ready for review & testing (developers)" and mark complete? If no, it does nothing else. It never moves cards to "Rejected".
 
 ## Troubleshooting
 
