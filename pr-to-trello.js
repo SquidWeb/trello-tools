@@ -10,8 +10,6 @@ const {
   TRELLO_BOARD_ID,
   REVIEW_LIST_ID,
   REVIEW_LIST_NAME,
-  REJECTED_LIST_ID,
-  REJECTED_LIST_NAME,
 } = process.env;
 
 /**
@@ -380,8 +378,8 @@ async function processPRToTrello(prId, owner, repo) {
     console.log('🎉 Successfully added testing information to Trello card!');
     console.log(`📋 Trello card: ${trelloUrl}`);
 
-    // Ask about PR state - column move determines completion status
-    const moveState = await promptYesNo('Move card to "Ready for review & testing (developers)" (complete) or "Rejected" (incomplete)?');
+    // Ask about PR state - only optionally move to review and mark complete
+    const moveToReview = await promptYesNo('Move card to "Ready for review & testing (developers)" and mark complete?');
 
     async function resolveListId(target) {
       if (target === 'review') {
@@ -391,58 +389,25 @@ async function processPRToTrello(prId, owner, repo) {
         if (!list) throw new Error(`Cannot find list named "${REVIEW_LIST_NAME || 'Ready for review & testing (developers)'}" on board ${TRELLO_BOARD_ID}`);
         return list.id;
       }
-      if (target === 'rejected') {
-        if (REJECTED_LIST_ID) return REJECTED_LIST_ID;
-        if (!TRELLO_BOARD_ID) throw new Error('Set REJECTED_LIST_ID or provide TRELLO_BOARD_ID to resolve REJECTED_LIST_NAME');
-        const list = await getListByName(TRELLO_BOARD_ID, REJECTED_LIST_NAME || 'Rejected');
-        if (!list) throw new Error(`Cannot find list named "${REJECTED_LIST_NAME || 'Rejected'}" on board ${TRELLO_BOARD_ID}`);
-        return list.id;
-      }
-      throw new Error(`Unknown --move-to value: ${target}. Use 'review' or 'rejected'.`);
+      throw new Error(`Unknown target: ${target}. Use 'review'.`);
     }
 
-    // Handle state sync based on user answer
-    if (moveState) {
-      console.log('🔁 PR state sync:');
-      
-      // Ask which state to set
-      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await new Promise((resolve) => {
-        rl.question('Choose state: [1] Review (complete) or [2] Rejected (incomplete)? ', (ans) => {
-          rl.close();
-          resolve(ans.trim());
-        });
-      });
-      
-      if (answer === '1') {
-        try {
-          const listId = await resolveListId('review');
-          console.log(`— Moving card to "Ready for review & testing (developers)" (list ${listId})...`);
-          await moveCardToList(cardId, listId);
-          console.log('   ✅ Moved');
-          
-          console.log('— Setting dueComplete=true (auto-complete for review)...');
-          await setCardDueComplete(cardId, true);
-          console.log('   ✅ Marked complete');
-        } catch (error) {
-          console.log(`   ❌ Failed: ${error.message}`);
-        }
-      } else if (answer === '2') {
-        try {
-          const listId = await resolveListId('rejected');
-          console.log(`— Moving card to "Rejected" (list ${listId})...`);
-          await moveCardToList(cardId, listId);
-          console.log('   ✅ Moved');
-          
-          console.log('— Setting dueComplete=false (auto-incomplete for rejected)...');
-          await setCardDueComplete(cardId, false);
-          console.log('   ✅ Marked incomplete');
-        } catch (error) {
-          console.log(`   ❌ Failed: ${error.message}`);
-        }
-      } else {
-        console.log('⚠️  Invalid choice. No state changes made.');
+    if (moveToReview) {
+      console.log('🔁 Moving card to review and marking complete...');
+      try {
+        const listId = await resolveListId('review');
+        console.log(`— Moving card to "Ready for review & testing (developers)" (list ${listId})...`);
+        await moveCardToList(cardId, listId);
+        console.log('   ✅ Moved');
+
+        console.log('— Setting dueComplete=true...');
+        await setCardDueComplete(cardId, true);
+        console.log('   ✅ Marked complete');
+      } catch (error) {
+        console.log(`   ❌ Failed: ${error.message}`);
       }
+    } else {
+      console.log('ℹ️  No state changes made.');
     }
 
   } catch (error) {
