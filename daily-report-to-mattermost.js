@@ -10,11 +10,11 @@ const MATTERMOST_TOKEN = process.env.MATTERMOST_TOKEN;
 
 if (!MATTERMOST_URL || !MATTERMOST_TOKEN) {
   console.error(
-    "MATTERMOST_URL and MATTERMOST_TOKEN must be set as environment variables."
+    "MATTERMOST_URL and MATTERMOST_TOKEN must be set as environment variables.",
   );
   process.exit(1);
 }
-const filename = `daily-report-${dayjs().format("YYYY-MM-DD-HH")}.md`;
+const filename = `./reports/daily-report-${dayjs().format("YYYY-MM-DD-HH")}.md`;
 const channelId = "18wejrtaufghupg6hq9fg7cf3w";
 
 function parseMarkdownSections(md) {
@@ -24,7 +24,7 @@ function parseMarkdownSections(md) {
   let screenshotPath = null;
   let inTicketSection = false;
   let inScreenshotSection = false;
-  
+
   for (const line of lines) {
     if (line.trim().startsWith("## tickets:")) {
       inTicketSection = true;
@@ -37,7 +37,7 @@ function parseMarkdownSections(md) {
       continue;
     }
     if (line.startsWith("---")) break;
-    
+
     if (inScreenshotSection) {
       // Extract screenshot path from markdown image syntax
       const imageMatch = line.match(/!\[.*?\]\((.+?)\)/);
@@ -106,7 +106,7 @@ function parseMarkdownSections(md) {
 
         try {
           let screenshotFileId = null;
-          
+
           // Upload screenshot first if it exists
           if (screenshotPath && fs.existsSync(screenshotPath)) {
             console.log("📸 Uploading screenshot...");
@@ -118,7 +118,9 @@ function parseMarkdownSections(md) {
           if (summary) {
             const fileIds = screenshotFileId ? [screenshotFileId] : [];
             await postToChannel(channelId, summary, fileIds);
-            console.log("✅ Summary sent" + (screenshotFileId ? " with screenshot" : ""));
+            console.log(
+              "✅ Summary sent" + (screenshotFileId ? " with screenshot" : ""),
+            );
             screenshotFileId = null; // Only attach to first message
           }
 
@@ -137,6 +139,6 @@ function parseMarkdownSections(md) {
         console.log("❌ Cancelled. No messages were sent.");
       }
       rl.close();
-    }
+    },
   );
 })();
