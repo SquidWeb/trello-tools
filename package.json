@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "pr-to-trello": "node pr-to-trello.js",
     "due-today": "node due-today.js",
     "create-card": "node create-card.js",
-    "trello-expand-url": "node trello-branch-name.js",
     "trello-branch": "node trello-branch-name.js",
-    "review-week": "node review-week.js"
+    "review-week": "node review-week.js",
+    "trello-export": "node trello-export.js",
+    "planyway-inspect": "node planyway-inspect.js",
+    "planyway-watch": "node planyway-watch.js",
+    "catalog": "node catalog.js"
   },
   "keywords": [],
   "author": "",
