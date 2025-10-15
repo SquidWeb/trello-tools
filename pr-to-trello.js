@@ -1,6 +1,10 @@
+/**
+ * CLI script that fetches a GitHub PR, extracts Trello context, and posts the PR's
+ * testing details to the linked Trello card, optionally moving it to review.
+ */
 require("dotenv").config();
 const axios = require("axios");
-const { ensureConfig, client: trelloClient, getListByName, moveCardToList, setCardDueComplete } = require('./lib/trello');
+const { ensureConfig, client: trelloClient, getListByName, moveCardToList, setCardDueComplete, getCard } = require('./lib/trello');
 const readline = require("readline");
 
 const {
@@ -327,6 +331,13 @@ async function processPRToTrello(prId, owner, repo) {
     }
     
     console.log(`✅ Extracted card ID: ${cardId}`);
+
+    console.log('📄 Fetching Trello card details...');
+    const trelloCard = await getCard(cardId, ['name', 'shortUrl']);
+    if (!trelloCard?.name) {
+      throw new Error('Failed to retrieve Trello card title. Please verify the card URL.');
+    }
+    console.log(`✅ Trello card title: "${trelloCard.name}"`);
     
     // Step 4: Parse PR description for testing info
     console.log('📝 Parsing PR description...');
