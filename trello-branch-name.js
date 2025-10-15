@@ -27,6 +27,10 @@ function slugifyName(name) {
     .replace(/^-+|-+$/g, '');      // trim leading/trailing '-'
 }
 
+function removeEstimateSuffix(slug) {
+  return String(slug || '').replace(/-(?:xl|l|m|s)(?:-\d+)?$/i, '');
+}
+
 async function extractTicketId(inputUrl) {
   let u;
   try {
@@ -72,13 +76,15 @@ async function main() {
 
   try {
     const id = await extractTicketId(arg);
+    const shortenedId = removeEstimateSuffix(id);
     console.log(id);
-    
+    console.log(shortenedId);
+
     // Copy to clipboard without blocking: spawn a detached shell and unref it.
     // We pass the content via an env var to avoid shell escaping issues.
     const fireAndForget = (cmd) => {
       const child = spawn('sh', ['-c', cmd], {
-        env: { ...process.env, CLIP_CONTENT: id },
+        env: { ...process.env, CLIP_CONTENT: shortenedId },
         detached: true,
         stdio: 'ignore',
       });
@@ -89,11 +95,11 @@ async function main() {
     // Using env var: printf %s "$CLIP_CONTENT" | wl-copy
     try {
       fireAndForget('printf %s "$CLIP_CONTENT" | wl-copy');
-      console.log(`Branch name copied to clipboard: ${id}`);
+      console.log(`Branch name copied to clipboard: ${shortenedId}`);
     } catch (wlErr) {
       try {
         fireAndForget('printf %s "$CLIP_CONTENT" | xclip -selection clipboard');
-        console.log(`Branch name copied to clipboard: ${id}`);
+        console.log(`Branch name copied to clipboard: ${shortenedId}`);
       } catch (xclipErr) {
         console.error('Note: Could not copy to clipboard. Install wl-clipboard (Wayland) or xclip (X11) for automatic copying.');
       }
