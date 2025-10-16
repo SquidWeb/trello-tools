@@ -355,10 +355,14 @@ async function processPRToTrello(prId, owner, repo) {
 
     // Sanitize testing info: strip HTML and image embeds
     testingInfo = sanitizeTestingInfo(testingInfo);
-    
-    if (!testingInfo && screenshots.length === 0) {
+
+    const missingTestingInfo = !testingInfo;
+    if (missingTestingInfo) {
+      testingInfo = 'Not provided.';
+    }
+
+    if (missingTestingInfo && screenshots.length === 0) {
       console.log('⚠️  No testing information or screenshots found in PR description');
-      return;
     }
     
     console.log(`✅ Found testing info: ${testingInfo ? 'Yes' : 'No'}`);
