@@ -2,6 +2,7 @@ require("dotenv").config();
 const dayjs = require("dayjs");
 const fs = require("fs");
 const { getMe, getBoardLists, getBoardCards } = require("./lib/trello");
+const { main: syncRejected } = require('./trello-sync-rejected');
 
 const { TRELLO_BOARD_ID } = process.env;
 
@@ -238,9 +239,16 @@ async function generateQuickReport() {
               console.log('  node daily-report-to-mattermost.js');
             });
             
-            mattermostProcess.on('exit', (mattermostCode) => {
+            mattermostProcess.on('exit', async (mattermostCode) => {
               if (mattermostCode === 0) {
                 console.log('\n🎉 Mattermost report completed successfully!');
+                try {
+                  console.log('\n🔁 Syncing rejected Trello cards with GitHub...');
+                  await syncRejected();
+                  console.log('✅ Rejected Trello cards synced.');
+                } catch (syncError) {
+                  console.error('❌ Error syncing rejected cards:', syncError.message);
+                }
               } else {
                 console.log(`\n⚠️  Mattermost script exited with code: ${mattermostCode}`);
               }
