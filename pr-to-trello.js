@@ -4,7 +4,7 @@
  */
 require("dotenv").config();
 const axios = require("axios");
-const { ensureConfig, client: trelloClient, getListByName, moveCardToList, setCardDueComplete, getCard } = require('./lib/trello');
+const { ensureConfig, client: trelloClient, getListByName, moveCardToList, setCardDueComplete, getCard, addCardAttachment, getCardAttachments } = require('./lib/trello');
 const readline = require("readline");
 
 const {
@@ -355,6 +355,15 @@ async function processPRToTrello(prId, owner, repo) {
       throw new Error('Failed to retrieve Trello card title. Please verify the card URL.');
     }
     console.log(`✅ Trello card title: "${trelloCard.name}"`);
+
+    console.log('📎 Checking existing Trello attachments...');
+    const existingAttachments = await getCardAttachments(cardId);
+    const prAttachmentExists = existingAttachments.some((attachment) => {
+      if (!attachment) return false;
+      const attachmentUrl = attachment.url || attachment.shortUrl;
+      const attachmentName = attachment.name;
+      return attachmentUrl === prData.html_url || attachmentName === `PR #${prData.number}`;
+    });
     
     // Step 4: Parse PR description for testing info
     console.log('📝 Parsing PR description...');
@@ -408,7 +417,14 @@ async function processPRToTrello(prId, owner, repo) {
     // Step 6: Add comment to Trello card
     console.log('💬 Adding comment to Trello card...');
     await addTrelloComment(cardId, comment);
-    
+
+    if (!prAttachmentExists) {
+      console.log('🔗 Attaching PR link to Trello card...');
+      await addCardAttachment(cardId, { url: prData.html_url, name: `PR #${prData.number}` });
+    } else {
+      console.log('ℹ️  Trello card already has this PR link attached. Skipping duplicate attachment.');
+    }
+
     console.log('🎉 Successfully added testing information to Trello card!');
     console.log(`📋 Trello card: ${trelloUrl}`);
 
